@@ -3,10 +3,17 @@ import LegalLayout from "../components/LegalLayout.jsx";
 export default function PrivacyPolicy() {
   return (
     <LegalLayout title="Privacy Policy" updated="August 26, 2026">
+      <Callout>
+        This is a starting template, not legal advice — replace the bracketed
+        placeholders with your real details and have it reviewed before you rely
+        on it, especially if you'll have users outside your own testing (GDPR,
+        CCPA, and Google's API policies all impose specific obligations).
+      </Callout>
+
       <Section title="Who we are">
         <p>
-          Afterword we are operated by https://github.com/ChAbdulRaheem786,
-          contact: chabraheem787@gmail.com. This policy explains what
+          Afterword ("we", "us") is operated by [Your Company / Your Name],
+          contact: [your-email@example.com]. This policy explains what
           information we collect through the Afterword application, how it's
           used, and how it's stored.
         </p>
@@ -66,7 +73,8 @@ export default function PrivacyPolicy() {
       <Section title="Where it's stored">
         <p>
           Data is stored in MongoDB Atlas. Refresh tokens are encrypted with
-          AES-256-GCM before being written to the database.
+          AES-256-GCM before being written to the database. [Add your database
+          region / hosting provider details here if relevant to your users.]
         </p>
       </Section>
 
@@ -75,7 +83,7 @@ export default function PrivacyPolicy() {
           We retain your account and draft data for as long as you have an
           account. You can delete individual drafts at any time from the
           dashboard. To delete your account and all associated data, contact
-          chabraheem787@gmail.com.
+          [your-email@example.com].
         </p>
       </Section>
 
@@ -85,7 +93,7 @@ export default function PrivacyPolicy() {
             "Google (OAuth sign-in and the Gmail API, to send your emails)",
             "Google Gemini API (to generate AI drafts from the instructions you provide)",
             "MongoDB Atlas (database hosting)",
-            "Vercel",
+            "[Your hosting providers — e.g. Vercel, Render/Railway]",
           ]}
         />
       </Section>
@@ -109,12 +117,13 @@ export default function PrivacyPolicy() {
       <Section title="Changes to this policy">
         <p>
           If we make material changes to this policy, we'll update the date at
-          the top of this page.
+          the top of this page. [Consider adding an email/in-app notice
+          mechanism if you have real users.]
         </p>
       </Section>
 
       <Section title="Contact">
-        <p>Questions about this policy: chabraheem787@gmail.com</p>
+        <p>Questions about this policy: [your-email@example.com]</p>
       </Section>
     </LegalLayout>
   );

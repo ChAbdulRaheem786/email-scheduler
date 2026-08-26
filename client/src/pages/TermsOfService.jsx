@@ -3,6 +3,10 @@ import LegalLayout from "../components/LegalLayout.jsx";
 export default function TermsOfService() {
   return (
     <LegalLayout title="Terms of Service" updated="August 26, 2026">
+      <Callout>
+        This is a starting template, not legal advice — replace the bracketed
+        placeholders and have it reviewed before relying on it with real users.
+      </Callout>
 
       <Section title="1. Acceptance of terms">
         <p>
@@ -97,8 +101,15 @@ export default function TermsOfService() {
         </p>
       </Section>
 
-      <Section title="11. Contact">
-        <p>Questions about these terms: chbaraheem787@gmail.com</p>
+      <Section title="11. Governing law">
+        <p>
+          [Specify your governing jurisdiction here — e.g. "These terms are
+          governed by the laws of ___."]
+        </p>
+      </Section>
+
+      <Section title="12. Contact">
+        <p>Questions about these terms: [your-email@example.com]</p>
       </Section>
     </LegalLayout>
   );

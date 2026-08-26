@@ -3,6 +3,7 @@ import passport from "passport";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
+import { asyncHandler } from "../middleware/asyncHandler.js";
 
 const router = Router();
 
@@ -40,11 +41,15 @@ router.get(
   }
 );
 
-router.get("/me", requireAuth, async (req, res) => {
-  const user = await User.findById(req.userId).select("email name image");
-  if (!user) return res.status(401).json({ error: "Not authenticated" });
-  res.json({ user });
-});
+router.get(
+  "/me",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.userId).select("email name image");
+    if (!user) return res.status(401).json({ error: "Not authenticated" });
+    res.json({ user });
+  })
+);
 
 router.post("/logout", (req, res) => {
   res.clearCookie("token", cookieOptions);

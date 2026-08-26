@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { decrypt } from "../utils/crypto.js";
+import { stripHeaderInjection } from "../utils/validation.js";
 
 function getOAuthClient() {
   return new google.auth.OAuth2(
@@ -19,11 +20,11 @@ function base64UrlEncode(str) {
 
 function buildRawMessage({ from, to, cc, bcc, subject, body }) {
   const headers = [
-    `From: ${from}`,
-    `To: ${to}`,
-    cc ? `Cc: ${cc}` : null,
-    bcc ? `Bcc: ${bcc}` : null,
-    `Subject: ${subject}`,
+    `From: ${stripHeaderInjection(from)}`,
+    `To: ${stripHeaderInjection(to)}`,
+    cc ? `Cc: ${stripHeaderInjection(cc)}` : null,
+    bcc ? `Bcc: ${stripHeaderInjection(bcc)}` : null,
+    `Subject: ${stripHeaderInjection(subject)}`,
     "MIME-Version: 1.0",
     "Content-Type: text/plain; charset=utf-8",
   ]

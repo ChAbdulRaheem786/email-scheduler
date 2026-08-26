@@ -6,6 +6,7 @@ import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
 import TermsOfService from "./pages/TermsOfService.jsx";
+import NotFound from "./pages/NotFound.jsx";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -43,6 +44,7 @@ export default function App() {
           )
         }
       />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
