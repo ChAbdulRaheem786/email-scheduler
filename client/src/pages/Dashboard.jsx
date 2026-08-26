@@ -3,6 +3,7 @@ import { api } from "../api";
 import Navbar from "../components/Navbar.jsx";
 import ComposeForm from "../components/ComposeForm.jsx";
 import DraftList from "../components/DraftList.jsx";
+import Footer from "../components/Footer.jsx";
 
 export default function Dashboard({ user, onSignOut }) {
   const [drafts, setDrafts] = useState([]);
@@ -99,6 +100,9 @@ export default function Dashboard({ user, onSignOut }) {
               />
             )}
           </div>
+        </div>
+        <div className="mt-14 pt-6 border-t border-ink/10">
+          <Footer dark={false} />
         </div>
       </main>
     </div>

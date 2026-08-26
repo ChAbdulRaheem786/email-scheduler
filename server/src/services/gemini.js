@@ -1,4 +1,4 @@
-const MODEL = "gemini-3.6-flash";
+const MODEL = "gemini-2.0-flash";
 
 export async function generateEmailDraft({ instructions, recipient, tone }) {
   const apiKey = process.env.GEMINI_API_KEY;

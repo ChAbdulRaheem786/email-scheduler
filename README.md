@@ -12,7 +12,7 @@ own Gmail account at that time.
     Session is a JWT in an httpOnly cookie — no server-side session store needed.
   - **Storage**: MongoDB Atlas via Mongoose — `User` (profile + encrypted refresh
     token) and `Draft` (email content + status + schedule).
-  - **AI drafting**: Gemini API (`gemini-3.6-flash`) generates a subject + body.
+  - **AI drafting**: Gemini API (`gemini-2.0-flash`) generates a subject + body.
   - **Scheduling**: [Agenda](https://github.com/agenda/agenda), a MongoDB-backed
     job scheduler — no external queue service needed. When you schedule a send,
     a job is persisted in Mongo for that exact timestamp; Agenda polls and fires

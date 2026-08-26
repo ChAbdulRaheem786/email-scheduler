@@ -1,10 +1,13 @@
 import SignInButton from "../components/SignInButton.jsx";
+import Footer from "../components/Footer.jsx";
+import logo from "../assets/logo.png";
 
 export default function Landing() {
   return (
     <main className="min-h-screen bg-ink text-parchment flex flex-col">
       <div className="flex-1 flex items-center">
         <div className="max-w-3xl mx-auto px-6 py-24 text-center">
+          <img src={logo} alt="Afterword" className="w-16 h-16 rounded-2xl mx-auto mb-8" />
           <div className="inline-flex items-center gap-2 text-brass-light font-mono text-xs tracking-[0.2em] uppercase mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-brass-light inline-block" />
             Write now. Arrive later.
@@ -42,6 +45,10 @@ export default function Landing() {
             body="Sent via the Gmail API as you — recipients see it come straight from your address."
           />
         </div>
+      </div>
+
+      <div className="border-t border-parchment/10 py-6">
+        <Footer />
       </div>
     </main>
   );
