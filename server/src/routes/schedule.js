@@ -40,7 +40,15 @@ router.post(
       await cancelJob(draft.qstashMessageId);
     }
 
-    const jobId = await scheduleDraftSend(draft._id, sendAt);
+    let jobId;
+    try {
+      jobId = await scheduleDraftSend(draft._id, sendAt);
+    } catch (err) {
+      console.error("Failed to schedule with QStash:", err.message);
+      return res.status(502).json({
+        error: "Failed to schedule the send — check the scheduling service configuration.",
+      });
+    }
 
     draft.status = "scheduled";
     draft.scheduledAt = sendAt;
