@@ -1,34 +1,36 @@
-# Afterword — AI email drafting & exact-time scheduled sending (MERN)
+# Afterword — AI email drafting & exact-time scheduled sending (MERN, Vercel-only)
 
-MongoDB + Express + React + Node. Sign in with Google → write an email by hand or
-let Gemini draft it → pick the exact moment it should go out → it's sent from your
-own Gmail account at that time.
+MongoDB + Express + React + Node, fully deployable on Vercel. Sign in with
+Google → write an email by hand or let Gemini draft it → pick the exact
+moment it should go out → it's sent from your own Gmail account at that time.
 
 ## Architecture
 
-- **`/server`** — Express API
-  - **Auth**: Passport Google OAuth2 strategy requesting the `gmail.send` scope
-    (`access_type=offline` + `prompt=consent`, so we always get a refresh token).
-    Session is a JWT in an httpOnly cookie — no server-side session store needed.
-  - **Storage**: MongoDB Atlas via Mongoose — `User` (profile + encrypted refresh
-    token) and `Draft` (email content + status + schedule).
+- **`/server`** — Express API, deployed as a **Vercel serverless function**
+  - **Entry points**: `src/index.js` runs a normal long-lived server for local
+    dev (`npm run dev`). `api/index.js` is what Vercel actually invokes in
+    production — it exports the same Express app directly, since Vercel's
+    Node runtime treats an Express app as a valid `(req, res)` handler.
+    `vercel.json` rewrites every request to that function.
+  - **Auth**: Passport Google OAuth2 requesting the `gmail.send` scope
+    (`access_type=offline` + `prompt=consent`, so we always get a refresh
+    token). Session is a JWT in an httpOnly cookie — no server-side session
+    store needed.
+  - **Storage**: MongoDB Atlas via Mongoose — `User` (profile + encrypted
+    refresh token) and `Draft` (email content + status + schedule). The DB
+    connection is cached across warm serverless invocations.
   - **AI drafting**: Gemini API (`gemini-2.0-flash`) generates a subject + body.
-  - **Scheduling**: [Agenda](https://github.com/agenda/agenda), a MongoDB-backed
-    job scheduler — no external queue service needed. When you schedule a send,
-    a job is persisted in Mongo for that exact timestamp; Agenda polls and fires
-    it, calling the Gmail API via `googleapis` (which auto-refreshes the access
-    token from the stored refresh token).
+  - **Scheduling**: **Upstash QStash** — a serverless-friendly message queue.
+    When you schedule a send, we tell QStash to call `/api/send-email` at the
+    exact timestamp. QStash verifies itself with a signature, so no session
+    cookie is needed for that call; the route checks the signature, then
+    sends the email via the Gmail API using the stored (encrypted) refresh
+    token. This replaces a self-hosted job scheduler like Agenda, which
+    **cannot** run on Vercel — serverless functions don't stay alive to poll
+    for jobs.
   - Refresh tokens are encrypted at rest (AES-256-GCM).
-- **`/client`** — React (Vite) SPA, talks to the API with `axios` + cookies.
-
-### ⚠️ Important deployment note
-
-Agenda needs a **long-running Node process** to poll and fire scheduled jobs —
-this will not work on Vercel serverless functions, which spin down between
-requests. Deploy:
-- **`/client`** → Vercel (or any static host) — this part works great on Vercel.
-- **`/server`** → a persistent Node host: **Render**, **Railway**, **Fly.io**, or
-  a VPS. All have free/cheap tiers suitable for this.
+- **`/client`** — React (Vite) SPA, deployed on Vercel, talks to the API with
+  `axios` + cookies.
 
 ## 1. Set up external services
 
@@ -40,23 +42,28 @@ requests. Deploy:
    - Add the scope `.../auth/gmail.send`.
    - Add yourself (and other testers) under **Test users** while in "Testing" status.
    - ⚠️ While unverified and in Testing status, Google expires refresh tokens
-     after 7 days and restricts sign-in to listed test users. For production use
-     by other people, submit for [OAuth verification](https://support.google.com/cloud/answer/9110914)
+     after 7 days and restricts sign-in to listed test users. For production
+     use by other people, submit for [OAuth verification](https://support.google.com/cloud/answer/9110914)
      — `gmail.send` is a restricted scope requiring a CASA security assessment.
 4. **APIs & Services → Credentials → Create Credentials → OAuth client ID**
    (Web application).
-   - Authorized redirect URI: `https://your-api-host.com/api/auth/google/callback`
+   - Authorized redirect URI: `https://your-api.vercel.app/api/auth/google/callback`
    - Also add `http://localhost:5000/api/auth/google/callback` for local dev.
    - Copy the Client ID and Client Secret.
 
 ### MongoDB Atlas
 1. Create a free cluster at [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas).
 2. Create a database user and copy the connection string into `MONGODB_URI`.
-3. **Network Access** → allow access from anywhere (`0.0.0.0/0`), since most
-   hosts (Render, Railway, Vercel) don't have static IPs by default.
+3. **Network Access** → allow access from anywhere (`0.0.0.0/0`), since Vercel
+   doesn't have static IPs.
 
 ### Gemini API
 Get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+
+### Upstash QStash
+1. Create a free account at [console.upstash.com/qstash](https://console.upstash.com/qstash).
+2. Copy **QSTASH_TOKEN**, **QSTASH_CURRENT_SIGNING_KEY**, and
+   **QSTASH_NEXT_SIGNING_KEY** from the dashboard.
 
 ### Encryption key
 ```bash
@@ -65,7 +72,9 @@ openssl rand -base64 32
 
 ## 2. Configure environment variables
 
-- `server/.env` — copy from `server/.env.example` and fill in every value.
+- `server/.env` — copy from `server/.env.example`, fill in every value.
+  `APP_URL` must be this API's own **public https URL** (your Vercel backend
+  domain) — QStash calls back to `${APP_URL}/api/send-email`.
 - `client/.env` — copy from `client/.env.example`, set `VITE_API_URL` to your
   API's URL.
 
@@ -83,42 +92,49 @@ npm install
 npm run dev       # http://localhost:5173
 ```
 
-Visit `http://localhost:5173`, sign in with Google, and try scheduling a send a
-couple of minutes out — Agenda polls every 10 seconds, so it'll fire close to
-the exact time even locally.
+**Testing scheduled sends locally requires a public URL**, since QStash needs
+to reach your machine to call the webhook — `localhost` won't work. Use a
+tunnel (e.g. `npx localtunnel --port 5000` or `ngrok http 5000`), set
+`APP_URL` to that tunnel URL, and use the tunnel's URL as
+`GOOGLE_CALLBACK_URL`'s host too if you want to test the full OAuth flow
+through it.
 
-## 4. Deploy
+## 4. Deploy — both on Vercel
 
-### Backend (Render example)
+### Backend
 1. Push this repo to GitHub.
-2. New Web Service on [render.com](https://render.com), root directory `server`.
-3. Build command: `npm install` · Start command: `npm start`.
-4. Add all variables from `server/.env.example` in the dashboard, with
-   `SERVER_URL` and `GOOGLE_CALLBACK_URL` set to your Render URL, and
-   `CLIENT_URL` set to your Vercel frontend URL.
-5. Since frontend and backend are on different domains, cookies need
-   `SameSite=None; Secure` — already handled automatically in `routes/auth.js`
-   when `NODE_ENV=production`.
+2. New Project on [vercel.com/new](https://vercel.com/new), **Root Directory: `server`**.
+3. Framework preset: Other. Vercel will pick up `api/index.js` and
+   `vercel.json` automatically — no build command needed.
+4. Add every variable from `server/.env.example` in **Settings → Environment
+   Variables**, with:
+   - `APP_URL` = this backend's own Vercel URL (e.g. `https://your-api.vercel.app`)
+   - `CLIENT_URL` = your frontend's Vercel URL
+   - `NODE_ENV=production` (required — this is what makes the session cookie
+     use `Secure` + `SameSite=None`, needed since frontend and backend are on
+     different domains)
+5. Deploy, then copy the resulting domain into `APP_URL` if you didn't already
+   know it, and redeploy.
 
-### Frontend (Vercel)
-1. Import the repo at [vercel.com/new](https://vercel.com/new), set the root
-   directory to `client`.
+### Frontend
+1. New Project on [vercel.com/new](https://vercel.com/new), **Root Directory: `client`**.
 2. Framework preset: Vite.
-3. Add environment variable `VITE_API_URL` = your deployed backend URL.
-4. Deploy.
+3. Add environment variable `VITE_API_URL` = your deployed backend's URL.
+4. Deploy. `client/vercel.json` already handles SPA routing so client-side
+   routes (like `/dashboard`) don't 404 on direct load.
 
 ### Final step
 Go back to the Google Cloud OAuth client and add the production callback URL
-(`https://your-api-host.com/api/auth/google/callback`) as an authorized redirect URI.
+(`https://your-api.vercel.app/api/auth/google/callback`) as an authorized
+redirect URI.
 
 ## Notes & limitations
 
-- Editing the content of an already-scheduled draft cancels the pending job (it
-  reverts to a plain draft) so you don't get two conflicting sends.
-- A failed send (e.g. revoked Gmail access) is marked **failed** with the error
-  shown in the dashboard — it is not silently retried forever.
+- Editing the content of an already-scheduled draft cancels the pending
+  QStash job (it reverts to a plain draft) so you don't get two conflicting sends.
+- A failed send (e.g. revoked Gmail access) is marked **failed** with the
+  error shown in the dashboard — QStash is told not to retry indefinitely.
 - Single-tenant per user: everyone only ever sees their own drafts.
-- `npm audit` flags a few moderate-severity advisories in Vite/React Router dev
-  tooling that require major version bumps to clear; they don't affect this
-  app's runtime behavior, but run `npm audit fix --force` in `client/` later if
-  you want to be on the latest majors.
+- `npm audit` in `client/` flags a few moderate-severity advisories in
+  Vite/React Router dev tooling that require major version bumps to clear;
+  they don't affect runtime behavior.

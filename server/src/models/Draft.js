@@ -15,8 +15,8 @@ const draftSchema = new mongoose.Schema(
       index: true,
     },
     scheduledAt: { type: Date, default: null },
-    // Agenda job _id, so we can cancel it if the draft is edited/deleted/rescheduled.
-    agendaJobId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    // QStash message id, so we can cancel/reschedule the pending send.
+    qstashMessageId: { type: String, default: null },
     sentAt: { type: Date, default: null },
     error: { type: String, default: null },
   },

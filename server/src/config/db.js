@@ -1,7 +1,15 @@
 import mongoose from "mongoose";
 
-export async function connectDb() {
-  mongoose.set("strictQuery", true);
-  await mongoose.connect(process.env.MONGODB_URI);
-  console.log("MongoDB connected");
+// Cached across warm serverless invocations (and a no-op on repeat calls in
+// the long-running local dev process) so we don't reconnect on every request.
+let connPromise = null;
+
+export function connectDb() {
+  if (!connPromise) {
+    mongoose.set("strictQuery", true);
+    connPromise = mongoose.connect(process.env.MONGODB_URI).then(() => {
+      console.log("MongoDB connected");
+    });
+  }
+  return connPromise;
 }

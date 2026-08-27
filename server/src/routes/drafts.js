@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import Draft from "../models/Draft.js";
-import { cancelJob } from "../services/scheduler.js";
+import { cancelJob } from "../services/qstash.js";
 import { isValidEmailList, LIMITS } from "../utils/validation.js";
 
 const router = Router();
@@ -89,10 +89,10 @@ router.patch(
     // Editing content of a scheduled draft cancels the pending send so it doesn't
     // go out with stale content; user must re-schedule.
     if (draft.status === "scheduled" && isContentEdit) {
-      await cancelJob(draft.agendaJobId);
+      await cancelJob(draft.qstashMessageId);
       draft.status = "draft";
       draft.scheduledAt = null;
-      draft.agendaJobId = null;
+      draft.qstashMessageId = null;
     }
 
     if (to !== undefined) draft.to = to;
@@ -116,7 +116,7 @@ router.delete(
     if (!draft) return res.status(404).json({ error: "Draft not found" });
 
     if (draft.status === "scheduled") {
-      await cancelJob(draft.agendaJobId);
+      await cancelJob(draft.qstashMessageId);
     }
 
     await draft.deleteOne();

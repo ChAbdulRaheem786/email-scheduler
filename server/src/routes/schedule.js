@@ -4,7 +4,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import Draft from "../models/Draft.js";
 import User from "../models/User.js";
-import { scheduleDraftSend, cancelJob } from "../services/scheduler.js";
+import { scheduleDraftSend, cancelJob } from "../services/qstash.js";
 
 const router = Router();
 
@@ -36,15 +36,15 @@ router.post(
     if (!draft) return res.status(404).json({ error: "Draft not found" });
 
     // If it was already scheduled, cancel the old job before creating the new one.
-    if (draft.status === "scheduled" && draft.agendaJobId) {
-      await cancelJob(draft.agendaJobId);
+    if (draft.status === "scheduled" && draft.qstashMessageId) {
+      await cancelJob(draft.qstashMessageId);
     }
 
     const jobId = await scheduleDraftSend(draft._id, sendAt);
 
     draft.status = "scheduled";
     draft.scheduledAt = sendAt;
-    draft.agendaJobId = jobId;
+    draft.qstashMessageId = jobId;
     draft.error = null;
     await draft.save();
 
