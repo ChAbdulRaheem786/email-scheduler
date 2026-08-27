@@ -19,7 +19,7 @@ moment it should go out → it's sent from your own Gmail account at that time.
   - **Storage**: MongoDB Atlas via Mongoose — `User` (profile + encrypted
     refresh token) and `Draft` (email content + status + schedule). The DB
     connection is cached across warm serverless invocations.
-  - **AI drafting**: Gemini API (`gemini-2.0-flash`) generates a subject + body.
+  - **AI drafting**: Gemini API (`gemini-3.5-flash `) generates a subject + body.
   - **Scheduling**: **Upstash QStash** — a serverless-friendly message queue.
     When you schedule a send, we tell QStash to call `/api/send-email` at the
     exact timestamp. QStash verifies itself with a signature, so no session
